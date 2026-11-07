@@ -24,6 +24,11 @@
         <div class="nav-item active">◈ &nbsp; Meeting Intelligence</div>
         <div class="nav-item" id="navTasks">✓ &nbsp; Follow-up Tasks <span id="sidebarTaskBadge" class="nav-badge">0</span></div>
 
+        <div class="sidebar-label meeting-history-label">MEETING HISTORY</div>
+        <div id="sidebarMeetingHistory" class="sidebar-meeting-history">
+          <div class="sidebar-history-empty">No saved meetings yet.</div>
+        </div>
+
         <div class="sidebar-label" style="margin-top: 30px;">AGENT LIFECYCLE</div>
         <div class="arch-flow">
           <div class="arch-step">1. Prospect Identification</div>
@@ -90,6 +95,9 @@
                   value="Acme Technologies"
                   required
                 />
+
+                <label for="meetingDate">Meeting date</label>
+                <input id="meetingDate" type="date" required />
 
                 <label for="goal">Meeting objective</label>
                 <input
@@ -352,6 +360,7 @@
               </div>
             </section>
           </div>
+
         </section>
       </main>
     </div>

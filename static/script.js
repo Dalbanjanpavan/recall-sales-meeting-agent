@@ -75,18 +75,21 @@ let currentProspectId = null;
 // Preset scenarios for hackathon demonstration
 const SCENARIOS = {
     1: {
+        meetingDate: "2026-11-07",
         name: "Rahul Sharma",
         company: "Acme Technologies",
         goal: "Address pricing objection and agree on custom enterprise terms",
         notes: "Rahul mentioned their CFO reviewed our initial quote and expressed pricing concerns. They asked if we could provide a revised enterprise tier with custom SLA by Friday. The sales team agreed to evaluate customized pricing."
     },
     2: {
+        meetingDate: "2026-11-12",
         name: "Vikram Patel",
         company: "Globex Corp",
         goal: "Review cloud migration roadmap and verify proposal delivery",
         notes: "Product demonstration was completed successfully last week. Vikram requested a customized migration proposal. The sales team promised to deliver it, but there is no confirmed record yet of Vikram receiving it."
     },
     3: {
+        meetingDate: "2026-11-14",
         name: "Sarah Connor",
         company: "Cyberdyne Systems",
         goal: "Finalize master service agreement and contract signing timeline",
@@ -99,6 +102,7 @@ function fillScenario(id) {
     if (!sc) return;
     document.getElementById("name").value = sc.name;
     document.getElementById("company").value = sc.company;
+    document.getElementById("meetingDate").value = sc.meetingDate || "";
     document.getElementById("goal").value = sc.goal;
     document.getElementById("notes").value = sc.notes;
 }
@@ -111,6 +115,7 @@ meetingForm.addEventListener("submit", async (event) => {
     const meetingData = {
         name: document.getElementById("name").value.trim(),
         company: document.getElementById("company").value.trim(),
+        meeting_date: document.getElementById("meetingDate").value,
         goal: document.getElementById("goal").value.trim(),
         notes: document.getElementById("notes").value.trim()
     };
@@ -138,6 +143,7 @@ meetingForm.addEventListener("submit", async (event) => {
         }
 
         renderAgentResults(data);
+        loadMeetingHistory();
 
     } catch (error) {
         errorState.textContent = error.message;
@@ -629,4 +635,82 @@ function escapeHtml(str) {
 // Load initial tasks on start
 document.addEventListener("DOMContentLoaded", () => {
     refreshTasks(null);
+});
+
+// ----------------- Saved Meeting History -----------------
+
+const sidebarMeetingHistory = document.getElementById("sidebarMeetingHistory");
+
+async function loadMeetingHistory() {
+    if (!sidebarMeetingHistory) return;
+    try {
+        const response = await fetch("/api/meetings");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Could not load meeting history.");
+        renderMeetingHistory(data.meetings || []);
+    } catch (error) {
+        sidebarMeetingHistory.innerHTML = '<div class="sidebar-history-empty">Meeting history is unavailable.</div>';
+    }
+}
+
+function renderMeetingHistory(meetings) {
+    sidebarMeetingHistory.replaceChildren();
+    if (!meetings.length) {
+        sidebarMeetingHistory.innerHTML = '<div class="sidebar-history-empty">No saved meetings yet.</div>';
+        return;
+    }
+    const count = document.createElement("div");
+    count.className = "sidebar-history-count";
+    count.textContent = `${meetings.length} saved meeting${meetings.length === 1 ? "" : "s"}`;
+    sidebarMeetingHistory.appendChild(count);
+    meetings.forEach((meeting) => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "sidebar-meeting-item";
+        item.innerHTML = `<span>MEETING · ${escapeHtml(meeting.meeting_date)}</span><strong>${escapeHtml(meeting.prospect_name)}</strong><small>${escapeHtml(meeting.company)}</small>`;
+        item.addEventListener("click", () => openSavedMeeting(meeting.meeting_id));
+        sidebarMeetingHistory.appendChild(item);
+    });
+}
+
+async function openSavedMeeting(meetingId) {
+    try {
+        const response = await fetch(`/api/meetings/${encodeURIComponent(meetingId)}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Could not load this meeting.");
+        const meeting = data.meeting;
+        document.getElementById("name").value = meeting.prospect_name;
+        document.getElementById("company").value = meeting.company;
+        document.getElementById("meetingDate").value = meeting.meeting_date;
+        document.getElementById("goal").value = meeting.meeting_goal;
+        document.getElementById("notes").value = meeting.notes;
+        cardProspectName.textContent = meeting.prospect_name;
+        cardCompany.textContent = meeting.company;
+        briefText.textContent = meeting.briefing || "No saved AI briefing for this meeting.";
+        const action = meeting.next_best_action || {};
+        nbaAction.textContent = action.recommended_action || "No next action recorded.";
+        nbaWhy.textContent = action.why_this_action || "";
+        nbaEvidence.textContent = action.supporting_evidence || "Original meeting notes";
+        nbaTiming.textContent = action.timing || "Date not recorded";
+        nbaStatus.textContent = action.current_status || "Historical meeting";
+        nbaResponsible.textContent = action.responsible_person || "Sales Team";
+        nbaConfidence.textContent = `Confidence: ${action.confidence || "Recorded"}`;
+        emptyState.classList.add("hidden");
+        loadingState.classList.add("hidden");
+        errorState.classList.add("hidden");
+        proposalCard.classList.add("hidden");
+        briefResult.classList.remove("hidden");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+        errorState.textContent = error.message;
+        errorState.classList.remove("hidden");
+    }
+}
+
+document.addEventListener("DOMContentLoaded", loadMeetingHistory);
+document.addEventListener("DOMContentLoaded", () => {
+    const meetingDate = document.getElementById("meetingDate");
+    if (meetingDate && !meetingDate.value) {
+        meetingDate.value = new Date().toISOString().slice(0, 10);
+    }
 });

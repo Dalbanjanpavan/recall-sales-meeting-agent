@@ -1373,4 +1373,12 @@ button:disabled {
     font-weight: 700;
 }
 
+.meeting-history-label { margin-top: 26px; }
+.sidebar-meeting-history { display: grid; gap: 7px; max-height: 240px; overflow-y: auto; padding-right: 3px; }
+.sidebar-history-empty { color: #6b7280; font-size: 11px; padding: 5px 0; }
+.sidebar-history-count { color: #94a3b8; font-size: 10px; padding: 1px 0 5px; }
+.sidebar-meeting-item { background: #111827; border: 1px solid #263244; border-radius: 7px; color: #dbeafe; cursor: pointer; padding: 9px; text-align: left; }
+.sidebar-meeting-item:hover { border-color: #6366f1; background: #172033; }
+.sidebar-meeting-item span, .sidebar-meeting-item strong, .sidebar-meeting-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-meeting-item span { color: #a5b4fc; font-size: 9px; font-weight: 700; letter-spacing: .8px; }.sidebar-meeting-item strong { font-size: 12px; margin-top: 3px; }.sidebar-meeting-item small { color: #94a3b8; font-size: 10px; margin-top: 3px; }
 

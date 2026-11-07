@@ -220,18 +220,39 @@ class HindsightService:
         Returns:
             (unique_memory_texts, unique_count, raw_retrieved_count)
         """
+        records, raw_count = self.search_memory_records(
+            query=query,
+            prospect_name=prospect_name,
+            company=company,
+            prospect_id=prospect_id,
+        )
+        unique_texts = [item["text"] for item in records][:MAX_MEMORIES]
+        return unique_texts, len(unique_texts), raw_count
+
+    def search_memory_records(
+        self,
+        query: str,
+        prospect_name: str,
+        company: Optional[str] = None,
+        prospect_id: Optional[str] = None,
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """Retrieve cleaned, traceable records for one verified prospect.
+
+        This is the same strict tagged Hindsight retrieval used by Meeting
+        Intelligence, but preserves IDs and timestamps for Meeting Chat evidence.
+        """
         if not query or not query.strip():
             self.last_recall_status = "not_attempted"
-            return [], 0, 0
+            return [], 0
 
         if not prospect_name or not prospect_name.strip():
             self.last_recall_status = "not_attempted"
-            return [], 0, 0
+            return [], 0
 
         if not self.client:
             logger.warning("Hindsight client unavailable; returning empty memory set.")
             self.last_recall_status = "unavailable"
-            return [], 0, 0
+            return [], 0
 
         company = company or ""
         p_id = prospect_id or normalize_prospect_id(prospect_name, company)
@@ -259,7 +280,8 @@ class HindsightService:
 
         raw_count = len(raw_results)
 
-        # 3. Clean, isolate, and deduplicate memories
+        # Clean, isolate, and deduplicate memories. Never fall back to an
+        # untagged search: empty context is safer than another prospect's data.
         cleaned = clean_and_deduplicate_memories(
             raw_memories=raw_results,
             prospect_id=p_id,
@@ -267,8 +289,7 @@ class HindsightService:
             company=company
         )
 
-        unique_texts = [item["text"] for item in cleaned][:MAX_MEMORIES]
-        return unique_texts, len(unique_texts), raw_count
+        return cleaned[:MAX_MEMORIES], raw_count
 
     def close(self):
         """Close thread-local and custom Hindsight clients cleanly."""

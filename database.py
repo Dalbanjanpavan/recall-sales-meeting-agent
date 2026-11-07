@@ -125,6 +125,23 @@ def init_db(db_path: str = DB_FILE) -> None:
     )
     """)
 
+    # 5. Append-only meeting history for reopening individual interactions.
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS meeting_history (
+        meeting_id TEXT PRIMARY KEY,
+        prospect_id TEXT NOT NULL,
+        prospect_name TEXT NOT NULL,
+        company TEXT NOT NULL,
+        meeting_date TEXT NOT NULL,
+        meeting_goal TEXT NOT NULL,
+        notes TEXT NOT NULL,
+        briefing TEXT,
+        next_action_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL,
+        UNIQUE(prospect_id, meeting_date, notes)
+    )
+    """)
+
     # Graceful migration for existing databases: check and add columns if missing
     def add_column_if_missing(table: str, column: str, col_type: str):
         cursor.execute(f"PRAGMA table_info({table})")
@@ -168,7 +185,60 @@ class DatabaseManager:
         init_db(self.db_path)
 
     def get_conn(self) -> sqlite3.Connection:
-        return get_db_connection(self.db_path)
+        conn = get_db_connection(self.db_path)
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
+
+    # ------------------ Meeting History Operations ------------------
+
+    def save_meeting_history(self, meeting: Dict[str, Any]) -> Dict[str, Any]:
+        """Persist an original meeting record without changing prior meetings."""
+        now = datetime.now(timezone.utc).isoformat()
+        conn = self.get_conn()
+        conn.execute(
+            """INSERT INTO meeting_history (
+                meeting_id, prospect_id, prospect_name, company, meeting_date,
+                meeting_goal, notes, briefing, next_action_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(prospect_id, meeting_date, notes) DO UPDATE SET
+                briefing=excluded.briefing, next_action_json=excluded.next_action_json""",
+            (
+                meeting["meeting_id"], meeting["prospect_id"], meeting["prospect_name"],
+                meeting["company"], meeting["meeting_date"], meeting["meeting_goal"],
+                meeting["notes"], meeting.get("briefing"),
+                json.dumps(meeting.get("next_best_action", {})), now,
+            ),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT * FROM meeting_history WHERE prospect_id = ? AND meeting_date = ? AND notes = ?",
+            (meeting["prospect_id"], meeting["meeting_date"], meeting["notes"]),
+        ).fetchone()
+        conn.close()
+        return self._format_meeting_history(dict(row))
+
+    @staticmethod
+    def _format_meeting_history(row: Dict[str, Any]) -> Dict[str, Any]:
+        item = dict(row)
+        try:
+            item["next_best_action"] = json.loads(item.pop("next_action_json") or "{}")
+        except (TypeError, json.JSONDecodeError):
+            item["next_best_action"] = {}
+        return item
+
+    def list_meeting_history(self, limit: int = 100) -> List[Dict[str, Any]]:
+        conn = self.get_conn()
+        rows = conn.execute(
+            "SELECT * FROM meeting_history ORDER BY meeting_date DESC, created_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+        conn.close()
+        return [self._format_meeting_history(dict(row)) for row in rows]
+
+    def get_meeting_history(self, meeting_id: str) -> Optional[Dict[str, Any]]:
+        conn = self.get_conn()
+        row = conn.execute("SELECT * FROM meeting_history WHERE meeting_id = ?", (meeting_id,)).fetchone()
+        conn.close()
+        return self._format_meeting_history(dict(row)) if row else None
 
     # ------------------ Customer State Operations ------------------
 

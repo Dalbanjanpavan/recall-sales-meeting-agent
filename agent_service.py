@@ -9,6 +9,7 @@ Follow-up Task Proposal with Safeguards -> Executive Briefing.
 
 from datetime import datetime, timezone
 import re
+import hashlib
 from typing import Dict, Any, List, Optional
 from database import DatabaseManager
 from memory_processor import normalize_prospect_id, detect_memory_conflicts
@@ -17,6 +18,7 @@ from date_validator import (
     validate_weekday_date_combination,
     sanitize_deadline,
     extract_deadline_phrase,
+    extract_date_from_text,
     redact_invalid_weekday_date_claims,
 )
 from hindsight_service import HindsightService
@@ -88,7 +90,7 @@ class RecallAgent:
             "Rejected": has_event("rejected"),
         }
         requested = has_event("requested|ask(?:ed)?|require(?:d)?")
-        promised = bool(re.search(rf"(?:sales team|we)\b[^.\n]{{0,80}}\b(promised|agreed|will send)\b[^.\n]{{0,80}}\b{doc_pattern}\b", evidence))
+        promised = bool(re.search(rf"(?:closeai|sales team|we)\b[^.\n]{{0,80}}\b(promised|agreed|will send|will prepare|prepare)\b[^.\n]{{0,80}}\b{doc_pattern}\b", evidence))
         safe_items = []
         for item in items or []:
             if not isinstance(item, dict):
@@ -142,6 +144,34 @@ class RecallAgent:
             if stage_type in allowed and allowed[stage_type]:
                 cleaned.append(item)
         return cleaned
+
+    @staticmethod
+    def _sanitize_state_claims(state: Dict[str, Any], evidence: str) -> None:
+        """Remove model claims that confuse discussion, promises, and completed work."""
+        text = evidence.lower()
+        pricing_concern = bool(re.search(
+            r"(?:price|pricing|cost|budget)[^.\n]{0,60}(?:too (?:high|expensive)|concern|objection|unaffordable|discount|reduce|constraint)|(?:too (?:high|expensive)|concern|objection|unaffordable|discount|reduce|constraint)[^.\n]{0,60}(?:price|pricing|cost|budget)",
+            text,
+        ))
+        if not pricing_concern:
+            state["objections"] = [item for item in state.get("objections", []) if not re.search(r"\b(pric|cost|budget)\w*", str(item), re.IGNORECASE)]
+            state["budget_concerns"] = [item for item in state.get("budget_concerns", []) if not re.search(r"\b(pric|cost|budget)\w*", str(item), re.IGNORECASE)]
+
+        demo_completed = bool(re.search(
+            r"(?:demo|demonstration)[^.\n]{0,60}(?:completed|conducted|presented|held|finished)|(?:completed|conducted|presented|held|finished)[^.\n]{0,60}(?:demo|demonstration)",
+            text,
+        ))
+        if not demo_completed:
+            state["completed_actions"] = [item for item in state.get("completed_actions", []) if not re.search(r"\b(demo|demonstration)\b", str(item), re.IGNORECASE)]
+
+        demo_promised = bool(re.search(
+            r"(?:closeai|sales team|we)[^.\n]{0,100}(?:agreed|promised|will prepare|will provide|will conduct)[^.\n]{0,100}(?:demo|demonstration)",
+            text,
+        ))
+        if demo_promised:
+            state["team_promises"] = RecallAgent._deduplicate_text_items(
+                state.get("team_promises", []) + ["Prepare the customized product demonstration and preliminary pricing proposal"]
+            )
 
     @staticmethod
     def _reconcile_verified_actions(
@@ -201,12 +231,23 @@ class RecallAgent:
             return []
         return RecallAgent._deduplicate_text_items(items)
 
+    @staticmethod
+    def _meeting_date_from_notes(notes: str, submitted_date: Optional[str] = None) -> str:
+        """Use selected or explicit meeting dates for chronology, not upload time."""
+        if submitted_date:
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", submitted_date):
+                raise ValueError("Meeting date must use YYYY-MM-DD format.")
+            return submitted_date
+        explicit_date = extract_date_from_text(notes)
+        return explicit_date.isoformat() if explicit_date else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
     def process_meeting(
         self,
         name: str,
         company: str,
         goal: str,
-        notes: str
+        notes: str,
+        meeting_date: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Main Agent Execution Pipeline:
@@ -266,6 +307,7 @@ class RecallAgent:
         customer_state_data["decision_stages"] = self._sanitize_decision_stages(
             customer_state_data.get("decision_stages", []), evidence_text
         )
+        self._sanitize_state_claims(customer_state_data, evidence_text)
 
         # Interest in a product is not a purchase decision. Do not display an
         # LLM-invented purchase-intent milestone without explicit evidence.
@@ -467,7 +509,10 @@ class RecallAgent:
             brief = brief.replace("2026-11-10", "Deadline not confirmed")
 
         # 9. HINDSIGHT MEMORY UPDATE: RETAIN LATEST MEETING
+        meeting_date = self._meeting_date_from_notes(notes, meeting_date)
         meeting_content = (
+            f"MEETING INTERACTION\n"
+            f"Meeting date: {meeting_date}\n"
             f"Prospect: {name}\n"
             f"Company: {company}\n"
             f"Meeting objective: {goal}\n"
@@ -482,11 +527,33 @@ class RecallAgent:
                     prospect_id=prospect_id,
                     prospect_name=name,
                     company=company,
-                    timestamp=datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                    document_id=(
+                        f"meeting-{prospect_id}-{meeting_date}-"
+                        f"{hashlib.sha256(notes.encode('utf-8')).hexdigest()[:12]}"
+                    ),
+                    timestamp=meeting_date,
                 )
                 hindsight_retained = True
         except Exception as e:
             print(f"Notice: meeting memory retention warning: {e}")
+
+        # Keep an append-only copy of the original interaction so the left
+        # history panel can reopen the actual Meeting 1, Meeting 2, and later
+        # notes without relying on an LLM summary to reconstruct them.
+        meeting_id = (
+            f"MEET-{hashlib.sha256((prospect_id + meeting_date + notes).encode('utf-8')).hexdigest()[:14].upper()}"
+        )
+        saved_meeting = self.db.save_meeting_history({
+            "meeting_id": meeting_id,
+            "prospect_id": prospect_id,
+            "prospect_name": name,
+            "company": company,
+            "meeting_date": meeting_date,
+            "meeting_goal": goal,
+            "notes": notes,
+            "briefing": brief,
+            "next_best_action": next_best_action,
+        })
 
         # Retrieve all persistent tasks for this prospect
         existing_tasks = self.tasks.get_tasks_for_prospect(prospect_id)
@@ -507,6 +574,7 @@ class RecallAgent:
             "tasks": existing_tasks,
             "ai_reasoning_mode": ai_reasoning_mode,
             "hindsight_retained": hindsight_retained,
+            "meeting_id": saved_meeting["meeting_id"],
             "hindsight_available": bool(self.hindsight and getattr(self.hindsight, "is_connected", False)),
             "ai_available": bool(self.ai and getattr(self.ai, "is_connected", False)),
             "hindsight_status": {

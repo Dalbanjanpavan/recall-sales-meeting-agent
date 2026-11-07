@@ -288,8 +288,22 @@ Respond with ONLY a JSON object with this exact structure:
         """Deterministic rule-based fallback when Groq LLM is unavailable or JSON fails."""
         combined_text = "\n".join(memories + [latest_notes]).lower()
         has_proposal = bool(re.search(r"\b(proposal|quotation)\b", combined_text))
-        has_pricing = any("pricing" in m.lower() for m in memories) or "pricing" in latest_notes.lower()
-        has_demo = any("demo" in m.lower() for m in memories) or "demo" in latest_notes.lower()
+        # A pricing proposal is not a pricing objection, and promising a demo
+        # is not evidence that the demo has been completed.
+        has_pricing = "pricing" in combined_text or "price" in combined_text
+        has_demo = "demo" in combined_text or "demonstration" in combined_text
+        pricing_concern = bool(re.search(
+            r"(?:price|pricing|cost|budget)[^.\n]{0,60}(?:too (?:high|expensive)|concern|objection|unaffordable|discount|reduce|constraint)|(?:too (?:high|expensive)|concern|objection|unaffordable|discount|reduce|constraint)[^.\n]{0,60}(?:price|pricing|cost|budget)",
+            combined_text,
+        ))
+        demo_completed = bool(re.search(
+            r"(?:demo|demonstration)[^.\n]{0,60}(?:completed|conducted|presented|held|finished)|(?:completed|conducted|presented|held|finished)[^.\n]{0,60}(?:demo|demonstration)",
+            combined_text,
+        ))
+        demo_promised = bool(re.search(
+            r"(?:closeai|sales team|we)[^.\n]{0,100}(?:agreed|promised|will prepare|will provide|will conduct)[^.\n]{0,100}(?:demo|demonstration)",
+            combined_text,
+        ))
         has_contract_mention = any("contract" in m.lower() for m in memories) or "contract" in latest_notes.lower()
         contract_signed = any("contract signed" in m.lower() or "agreement signed" in m.lower() for m in memories) or ("contract signed" in latest_notes.lower() or "agreement signed" in latest_notes.lower())
         if "unsigned" in latest_notes.lower() or "not signed" in latest_notes.lower():
@@ -314,7 +328,7 @@ Respond with ONLY a JSON object with this exact structure:
             return bool(re.search(rf"\b{doc}\b[^.\n]{{0,24}}\b{event}\b|\b{event}\b(?:\s+the)?\s+(?:revised\s+)?\b{doc}\b", combined_text))
 
         proposal_requested = has_doc_event("requested|ask(?:ed)?|require(?:d)?")
-        proposal_promised = has_doc_event("promised") or bool(re.search(rf"(?:sales team|we)\b[^.\n]{{0,80}}\b(promised|agreed|will send)\b[^.\n]{{0,80}}\b{doc}\b", combined_text))
+        proposal_promised = has_doc_event("promised") or bool(re.search(rf"(?:closeai|sales team|we)\b[^.\n]{{0,80}}\b(promised|agreed|will send|will prepare|prepare)\b[^.\n]{{0,80}}\b{doc}\b", combined_text))
         proposal_sent = has_doc_event("sent|dispatched")
         proposal_delivered = has_doc_event("delivered")
         proposal_received = has_doc_event(r"received|receipt\s+(?:was\s+)?confirmed")
@@ -417,11 +431,11 @@ Respond with ONLY a JSON object with this exact structure:
                 timing = "Upcoming meeting"
                 status = "Reviewed, approval unconfirmed"
         elif proposal_requested or proposal_promised:
-            rec_action = f"Verify whether the proposal or pricing details have been delivered to and received by {prospect_name}."
-            reason = "A proposal was discussed or promised, but there is no confirmed record of receipt."
-            evidence = "Proposal discussed without confirmed delivery/receipt in customer records."
-            timing = "Next conversation"
-            status = "Status not confirmed"
+            rec_action = f"Prepare and send the promised proposal or pricing details to {prospect_name}."
+            reason = "The proposal was requested or promised, but sending or receipt has not been recorded."
+            evidence = "Customer records contain a proposal request or Sales Team promise, without sending evidence."
+            timing = "Next sales action"
+            status = "Promised or requested; not sent"
         elif proposal_delivered and not proposal_reviewed:
             rec_action = f"Confirm whether {prospect_name} and internal stakeholders have reviewed the delivered proposal."
             reason = "Proposal delivery is confirmed, but customer review has not been verified."
@@ -434,7 +448,7 @@ Respond with ONLY a JSON object with this exact structure:
             evidence = "Customer expressed purchase intent without signed agreement."
             timing = "Upcoming meeting"
             status = "Intent confirmed, contract pending"
-        elif has_pricing:
+        elif pricing_concern:
             rec_action = f"Clarify pricing expectations and budget parameters with {prospect_name}."
             reason = "Pricing was identified as a focal area or concern."
             evidence = "Meeting objective or notes cite pricing discussions."
@@ -457,15 +471,15 @@ Respond with ONLY a JSON object with this exact structure:
                 "current_stage": stage,
                 "requirements": [meeting_goal],
                 "interests": ["Product demonstration and capabilities"],
-                "objections": ["Pricing sensitivity"] if has_pricing else [],
-                "budget_concerns": ["Pricing review requested"] if has_pricing else [],
+                "objections": ["Pricing sensitivity"] if pricing_concern else [],
+                "budget_concerns": ["Pricing review requested"] if pricing_concern else [],
                 "decisions": [],
                 "decision_stages": decision_stages,
                 "document_lifecycle": doc_lifecycle,
                 "customer_requests": [meeting_goal],
-                "team_promises": [],
+                "team_promises": ["Prepare the customized product demonstration and preliminary pricing proposal"] if demo_promised else [],
                 "scheduled_actions": [f"Meeting on {meeting_goal}"] if confirmed_meeting else [],
-                "completed_actions": ["Product demonstration"] if has_demo else [],
+                "completed_actions": ["Product demonstration"] if demo_completed else [],
                 "unresolved_actions": [rec_action],
                 "conflicts_detected": []
             },

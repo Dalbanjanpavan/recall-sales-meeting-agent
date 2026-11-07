@@ -69,6 +69,7 @@ def prepare_meeting():
         company = str(data.get("company", "")).strip()
         notes = str(data.get("notes", "")).strip()
         goal = str(data.get("goal", "")).strip()
+        meeting_date = str(data.get("meeting_date", "")).strip() or None
 
         if not all([name, company, notes, goal]):
             return jsonify({"error": "Please fill in all required fields."}), 400
@@ -78,7 +79,8 @@ def prepare_meeting():
             name=name,
             company=company,
             goal=goal,
-            notes=notes
+            notes=notes,
+            meeting_date=meeting_date,
         )
 
         return jsonify(result)
@@ -211,6 +213,29 @@ def get_customer_state(prospect_id):
         return jsonify({"success": True, "state": state})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# ------------------ Meeting History API ------------------
+
+@routes.route("/api/meetings", methods=["GET"])
+def list_meetings():
+    try:
+        return jsonify({"success": True, "meetings": _current_db().list_meeting_history()})
+    except Exception:
+        current_app.logger.exception("Could not list meeting history")
+        return jsonify({"error": "Meeting history is unavailable right now."}), 500
+
+
+@routes.route("/api/meetings/<meeting_id>", methods=["GET"])
+def get_meeting(meeting_id):
+    try:
+        meeting = _current_db().get_meeting_history(meeting_id)
+        if not meeting:
+            return jsonify({"error": "Meeting not found."}), 404
+        return jsonify({"success": True, "meeting": meeting})
+    except Exception:
+        current_app.logger.exception("Could not load meeting history record")
+        return jsonify({"error": "Could not load this meeting."}), 500
 
 
 # Backwards-compatible default application objects. Service construction is now
