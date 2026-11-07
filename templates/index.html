@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recall — Sales Meeting Intelligence Agent</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-icon">R</div>
+          <div>
+            <h2>Recall</h2>
+            <span>AI SALES AGENT</span>
+          </div>
+        </div>
+
+        <div class="sidebar-label">WORKSPACE</div>
+        <div class="nav-item active">◈ &nbsp; Meeting Intelligence</div>
+        <div class="nav-item" id="navTasks">✓ &nbsp; Follow-up Tasks <span id="sidebarTaskBadge" class="nav-badge">0</span></div>
+
+        <div class="sidebar-label" style="margin-top: 30px;">AGENT LIFECYCLE</div>
+        <div class="arch-flow">
+          <div class="arch-step">1. Prospect Identification</div>
+          <div class="arch-step">2. Hindsight Memory Recall</div>
+          <div class="arch-step">3. Deduplication & Chronology</div>
+          <div class="arch-step">4. Customer Decisions & Lifecycle</div>
+          <div class="arch-step">5. Multi-Stage AI Reasoning</div>
+          <div class="arch-step">6. Next Best Action</div>
+          <div class="arch-step active">7. Tool Proposal & Approval</div>
+          <div class="arch-step">8. Outcome Synchronization</div>
+        </div>
+
+        <div class="sidebar-bottom">
+          <div class="memory-status">
+            <span class="status-dot"></span>
+            <span id="memoryStatusText">Hindsight status checked on analysis</span>
+          </div>
+          <p>Autonomous intelligence with human-in-the-loop control.</p>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <span>Workspace / Sales Meeting Intelligence Agent</span>
+            <span class="agent-mode-pill">HUMAN-IN-THE-LOOP AGENT</span>
+          </div>
+          <span class="topbar-right">Hindsight Cloud • Groq LLM • SQLite Persistence</span>
+        </header>
+
+        <section class="content">
+          <div class="heading">
+            <div class="eyebrow">AUTONOMOUS SALES INTELLIGENCE & ACTION</div>
+            <h1>Intelligence that remembers, reasons, and acts.</h1>
+            <p>
+              Recall remembers historical interactions with Hindsight, understands changing customer situations,
+              proposes verified next actions, executes approved tools, and learns from real-world outcomes.
+            </p>
+          </div>
+
+          <div class="workspace">
+            <!-- Left Panel: Input Form -->
+            <section class="form-panel">
+              <div class="panel-heading">
+                <h2>Meeting Details</h2>
+                <span class="panel-tag">NEW INTERACTION</span>
+              </div>
+
+              <form id="meetingForm">
+                <label for="name">Prospect name</label>
+                <input
+                  id="name"
+                  type="text"
+                  placeholder="e.g. Rahul Sharma"
+                  value="Rahul Sharma"
+                  required
+                />
+
+                <label for="company">Company</label>
+                <input
+                  id="company"
+                  type="text"
+                  placeholder="e.g. Acme Technologies"
+                  value="Acme Technologies"
+                  required
+                />
+
+                <label for="goal">Meeting objective</label>
+                <input
+                  id="goal"
+                  type="text"
+                  placeholder="e.g. Address pricing objection and finalize proposal terms"
+                  value="Address pricing objection and finalize proposal terms"
+                  required
+                />
+
+                <label for="notes">Latest meeting notes</label>
+                <textarea
+                  id="notes"
+                  rows="6"
+                  placeholder="What happened in the latest conversation? Enter customer requirements, objections, promises, and unconfirmed actions..."
+                  required
+                >Rahul mentioned their CFO reviewed our initial quote and expressed pricing concerns. They asked if we could provide a revised enterprise tier with custom SLA by Friday. The sales team agreed to evaluate customized pricing.</textarea>
+
+                <button type="submit" id="submitBtn">
+                  Analyze & Reason With Agent <span>→</span>
+                </button>
+              </form>
+
+              <div class="quick-examples">
+                <span class="example-label">Quick Scenario Fill:</span>
+                <div class="example-pills">
+                  <button type="button" class="pill-btn" onclick="fillScenario(1)">1. Pricing Objection</button>
+                  <button type="button" class="pill-btn" onclick="fillScenario(2)">2. Demo Follow-up</button>
+                  <button type="button" class="pill-btn" onclick="fillScenario(3)">3. Contract Review</button>
+                </div>
+              </div>
+
+              <p class="privacy-note">
+                🔒 Multi-layer tagged and application-filtered prospect isolation. Confirmed outcomes are retained into Hindsight long-term memory.
+              </p>
+            </section>
+
+            <!-- Right Panel: Intelligence, Actions, State & Dashboard -->
+            <section class="result-panel">
+              <div class="result-header">
+                <div>
+                  <div class="eyebrow">AGENT DECISION & MEMORY DASHBOARD</div>
+                  <h2>Active Intelligence Brief</h2>
+                </div>
+                <div class="header-tags">
+                  <span class="mode-tag" id="reasoningModeTag">GROQ LLM</span>
+                  <span class="report-tag" id="statusBadge">AWAITING INPUT</span>
+                </div>
+              </div>
+
+              <!-- Empty State -->
+              <div id="emptyState" class="empty-state">
+                <div class="empty-icon">◈</div>
+                <h3>Agent Ready for Analysis</h3>
+                <p>
+                  Submit meeting notes above. Recall will retrieve isolated Hindsight memories,
+                  reconstruct the chronological customer state, evaluate the Next Best Action,
+                  and propose an executable follow-up task.
+                </p>
+              </div>
+
+              <!-- Loading State -->
+              <div id="loadingState" class="loading-state hidden">
+                <div class="spinner"></div>
+                <h3>Agent Processing...</h3>
+                <p id="loadingMsg">
+                  Retrieving memories from Hindsight, deduplicating records, analyzing chronological state, and selecting Next Best Action...
+                </p>
+              </div>
+
+              <!-- Error State -->
+              <div id="errorState" class="error-state hidden"></div>
+
+              <!-- Active Results Container -->
+              <div id="briefResult" class="brief-result hidden">
+                
+                <!-- Prospect State Header -->
+                <div class="prospect-header-card">
+                  <div class="prospect-info">
+                    <span class="prospect-label">ACTIVE PROSPECT</span>
+                    <h3 id="cardProspectName">Rahul Sharma</h3>
+                    <span id="cardCompany" class="prospect-company">Acme Technologies</span>
+                  </div>
+                  <div class="prospect-badges">
+                    <div class="stage-badge-box">
+                      <span class="badge-sub">CURRENT STAGE</span>
+                      <span id="cardStage" class="stage-pill">Proposal Review</span>
+                    </div>
+                    <div class="memory-count-box">
+                      <span class="badge-sub">HINDSIGHT MEMORY</span>
+                      <span id="memoryCount" class="memory-pill">0 unique</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Conflicts Alert (if any) -->
+                <div id="conflictsBox" class="conflict-alert hidden">
+                  <span class="conflict-icon">⚠️</span>
+                  <div>
+                    <strong>Chronological Progression / Conflict Detected:</strong>
+                    <div id="conflictText"></div>
+                  </div>
+                </div>
+
+                <!-- NEXT BEST ACTION CARD -->
+                <div class="action-card nba-card">
+                  <div class="card-top-bar">
+                    <span class="card-badge nba-badge">AI NEXT BEST ACTION (RECOMMENDATION)</span>
+                    <span id="nbaConfidence" class="confidence-pill">Confidence: High</span>
+                  </div>
+                  <h3 id="nbaAction" class="nba-title">Recommended Action Title</h3>
+                  <p id="nbaWhy" class="nba-desc">Why this action is strategically important now.</p>
+                  
+                  <div class="nba-metadata-grid">
+                    <div class="meta-item">
+                      <span class="meta-label">SUPPORTING EVIDENCE</span>
+                      <span id="nbaEvidence" class="meta-val">Meeting history notes</span>
+                    </div>
+                    <div class="meta-item">
+                      <span class="meta-label">RELEVANT TIMING</span>
+                      <span id="nbaTiming" class="meta-val">Next meeting</span>
+                    </div>
+                    <div class="meta-item">
+                      <span class="meta-label">CURRENT STATUS</span>
+                      <span id="nbaStatus" class="meta-val">Status not confirmed</span>
+                    </div>
+                    <div class="meta-item">
+                      <span class="meta-label">RESPONSIBLE PARTY</span>
+                      <span id="nbaResponsible" class="meta-val">Sales Team</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- AGENT TOOL PROPOSAL CARD (HUMAN APPROVAL GATE) -->
+                <div id="proposalCard" class="action-card proposal-card hidden">
+                  <div class="card-top-bar">
+                    <span class="card-badge tool-badge">AGENT TOOL PROPOSAL: CREATE FOLLOW-UP TASK</span>
+                    <span class="approval-req-badge">HUMAN APPROVAL REQUIRED</span>
+                  </div>
+                  
+                  <div class="proposal-body">
+                    <div class="proposal-title-row">
+                      <div class="tool-icon">⚡</div>
+                      <div>
+                        <div class="proposal-prop-id" id="proposalIdDisplay">PROP-XXXXXX</div>
+                        <h4 id="proposalDescription">Verify whether customized pricing proposal was delivered</h4>
+                      </div>
+                    </div>
+
+                    <div class="proposal-details">
+                      <div class="prop-detail-line"><strong>Reason:</strong> <span id="proposalReason">Sales team promised proposal, delivery unconfirmed.</span></div>
+                      <div class="prop-detail-line"><strong>Supporting Evidence:</strong> <span id="proposalEvidence">Customer request in meeting notes.</span></div>
+                      <div class="prop-detail-line"><strong>Requester:</strong> <span id="proposalRequester">Rahul Sharma</span> | <strong>Responsible Party:</strong> <span id="proposalOwner">Sales Team</span> | <strong>Deadline:</strong> <span id="proposalDeadline">Deadline not confirmed</span></div>
+                    </div>
+
+                    <!-- Deadline Conflict Human Confirmation Gate -->
+                    <div id="proposalConflictWarning" class="proposal-conflict-box hidden">
+                      <div class="conflict-head">
+                        <span class="conflict-head-icon">⚠️</span>
+                        <strong>Unresolved Deadline Conflict Detected</strong>
+                      </div>
+                      <p id="proposalConflictDesc" class="conflict-desc">Conflicting or ambiguous deadlines require a human-confirmed calendar date.</p>
+                      <div class="deadline-confirm-form">
+                        <label for="confirmedDueDateInput">Confirm intended deadline date before approval:</label>
+                        <div class="deadline-input-group">
+                          <select id="deadlineQuickSelect" class="deadline-select" onchange="applyDeadlineSelect()">
+                            <option value="">-- Quick select date --</option>
+                          </select>
+                          <input type="date" id="confirmedDueDateInput" class="deadline-date-input" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="approval-controls" id="proposalActions">
+                      <button type="button" class="btn-approve" id="approveBtn" onclick="approveCurrentProposal()">
+                        ✓ Approve & Create Task
+                      </button>
+                      <button type="button" class="btn-reject" id="rejectBtn" onclick="rejectCurrentProposal()">
+                        ✕ Reject Action
+                      </button>
+                    </div>
+
+                    <!-- Approval Feedback Result -->
+                    <div id="proposalFeedback" class="proposal-feedback hidden"></div>
+                  </div>
+                </div>
+
+                <!-- PERSISTENT TASKS DASHBOARD -->
+                <div class="dashboard-section">
+                  <div class="section-title-row">
+                    <h3>Created Follow-up Tasks (Persistent SQLite Database)</h3>
+                    <span id="taskCountBadge" class="task-count-pill">0 Tasks</span>
+                  </div>
+                  <div id="taskList" class="task-list-container">
+                    <div class="no-tasks-hint">No approved tasks yet. Approve a proposal above to execute task creation.</div>
+                  </div>
+                </div>
+
+                <!-- CUSTOMER DECISION & DOCUMENT LIFECYCLE (PART 1 & PART 2) -->
+                <div class="customer-state-section">
+                  <h3>Customer Decision Stages & Document Lifecycle</h3>
+                  <div class="decision-grid">
+                    <div class="decision-card">
+                      <span class="decision-card-title">Confirmed Decision Milestones</span>
+                      <div id="decisionStagesList" class="decision-list">
+                        <div class="no-data-hint">No formal decision milestone recorded.</div>
+                      </div>
+                    </div>
+                    <div class="decision-card">
+                      <span class="decision-card-title">Document & Proposal Lifecycle</span>
+                      <div id="documentLifecycleList" class="decision-list">
+                        <div class="no-data-hint">No document activity recorded.</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CHRONOLOGICAL CUSTOMER SITUATION -->
+                <div class="customer-state-section">
+                  <h3>Chronological Customer State (Verified Facts)</h3>
+                  <div class="state-grid">
+                    <div class="state-box">
+                      <span class="state-box-title">Known Requirements</span>
+                      <ul id="stateReqs" class="state-list"><li>None recorded</li></ul>
+                    </div>
+                    <div class="state-box">
+                      <span class="state-box-title">Objections & Concerns</span>
+                      <ul id="stateObjections" class="state-list"><li>None recorded</li></ul>
+                    </div>
+                    <div class="state-box">
+                      <span class="state-box-title">Team Commitments</span>
+                      <ul id="statePromises" class="state-list"><li>None recorded</li></ul>
+                    </div>
+                    <div class="state-box">
+                      <span class="state-box-title">Unresolved Actions</span>
+                      <ul id="stateUnresolved" class="state-list"><li>None recorded</li></ul>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- MEETING BRIEFING SECTION -->
+                <div class="briefing-section">
+                  <div class="section-title-row">
+                    <h3>Executive Meeting Briefing</h3>
+                    <button type="button" class="btn-toggle" onclick="toggleBriefing()">Toggle Full Text</button>
+                  </div>
+                  <div id="briefText" class="brief-text"></div>
+                </div>
+
+                <!-- RETRIEVED HINDSIGHT MEMORIES -->
+                <div class="memory-section">
+                  <div class="section-title-row">
+                    <h3>Retrieved Memories from Hindsight</h3>
+                    <span class="prospect-tag-badge" id="memoryStatsBadge">0 unique (0 raw)</span>
+                  </div>
+                  <div id="memoryList" class="memory-list"></div>
+                </div>
+
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+  </body>
+</html>
