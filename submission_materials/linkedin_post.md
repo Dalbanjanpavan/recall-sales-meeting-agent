@@ -1,8 +1,11 @@
-I’m excited to share Recall – AI Sales Agent, a project I built to help sales teams keep track of meeting history, customer commitments, proposal status, conflicts, and next steps.
+What happens when an AI sales assistant remembers the wrong customer?
 
-The fun part was working with Hindsight memory and learning that an AI agent needs more than a good prompt. I added prospect isolation, evidence checks, lifecycle tracking, human approval, and a local fallback when external services are unavailable.
+I built Recall, a Flask app that combines meeting notes, isolated Hindsight memory, SQLite state, and human approval. It tracks meeting history, proposal lifecycle, conflicts, and evidence-backed next steps.
 
-Building this taught me a lot about making AI useful without letting it make important decisions silently.
+The biggest lesson was that memory alone is not enough. An agent also needs identity checks, date validation, duplicate prevention, and a backend approval gate before suggestions become tasks.
 
-Public GitHub repository: [ADD_PUBLIC_REPOSITORY_LINK]
+Article: [PASTE_PUBLIC_ARTICLE_URL]
+GitHub: https://github.com/Dalbanjanpavan/recall-sales-meeting-agent
+
+#AIAgents #AI #Hindsight #AgentMemory
 

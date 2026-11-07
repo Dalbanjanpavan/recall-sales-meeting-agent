@@ -1,4 +1,4 @@
-# Building Recall: A Sales Agent That Remembers the Whole Conversation
+# I Built a Sales Agent That Uses Hindsight to Remember Customer History
 
 ## What Recall is
 
@@ -10,7 +10,7 @@ This makes the project more than a meeting summarizer. It tries to preserve the 
 
 ## Why I built it
 
-Sales notes often look simple when they are written, but they become difficult to use after several meetings. A proposal can be promised in one meeting, discussed in another, and confirmed as received in a third. A normal summary may repeat all three statements without deciding which one is current. It may also turn a request into a confirmed appointment or treat an old deadline as if it were still active.
+Sales notes become difficult to use after several meetings. A proposal can be promised in one meeting, discussed in another, and confirmed as received in a third. A normal summary may repeat all three statements without deciding which one is current. It may also turn a request into a confirmed appointment or treat an old deadline as active.
 
 I wanted to explore whether an AI agent could help with this kind of continuity while still leaving important decisions with a human. The interesting problem was not just asking a model to write a nice summary. It was making the surrounding system careful enough that the summary had evidence behind it and did not silently change the meaning of an old note.
 
@@ -138,4 +138,14 @@ This project also taught me to be honest about integration status. Automated tes
 The current application is a focused demonstration rather than a production CRM. It uses SQLite, has no user authentication, and still depends on manual review for ambiguous dates and contradictory evidence. A next version could add authenticated users, a proper server database, richer memory inspection, and a clearer first-run configuration screen. I would also add a checked-in dependency lock or requirements file so setup is one command.
 
 For now, the part I am happiest with is the boundary between suggestion and action. Recall can help organize a complicated customer history, but a human still decides whether a proposed follow-up should become a real task.
+
+## Suggested visuals for the published article
+
+The article can be published without images, but the submission guide recommends adding visuals. If I add them later, I would use:
+
+- A screenshot of the Meeting Intelligence screen showing the meeting history sidebar.
+- A screenshot of an evidence-backed recommendation with its lifecycle and uncertainty fields.
+- The architecture diagram from `architecture.md`.
+
+These should use synthetic customer data only. I would not include API keys, `.env` files, the local database, or private customer information.
 

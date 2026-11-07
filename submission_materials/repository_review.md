@@ -43,8 +43,8 @@ If `origin` already exists, inspect it first with `git remote -v`; do not add a 
 
 ## Personal items still needed
 
-- Replace `[ADD_PUBLIC_REPOSITORY_LINK]` in `linkedin_post.md` with the final public URL.
-- No screenshots are required for the written submission; the article is intentionally text-only.
+- Replace `[PASTE_PUBLIC_ARTICLE_URL]` in `linkedin_post.md` and `reddit_post.md` after publishing the article.
+- The guide recommends screenshots or diagrams in the article. Use synthetic data only; the article now lists safe visual options.
 - Decide whether the repository should be public for the submission.
 - Correct or freeze the date-sensitive tests, then rerun the full suite.
 - Run a live check separately if credentials are available, and report the result honestly.
